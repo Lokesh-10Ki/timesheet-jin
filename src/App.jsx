@@ -39,7 +39,9 @@ import {
   ArrowBackIcon,
   MinusIcon,
   ChevronLeftIcon,
-ChevronRightIcon} from "@chakra-ui/icons";
+  ChevronRightIcon,
+  DeleteIcon,
+} from "@chakra-ui/icons";
 
 import "./App.css";
 
@@ -136,6 +138,7 @@ const App = () => {
   
    useEffect(() => {
      updateWeek(startDate);
+     console.log(startDate);
    }, [startDate]);
 
 //  useEffect(() => {
@@ -159,7 +162,12 @@ const App = () => {
  };
 
   const formatStartDate = (date) => {
-    
+    console.log(
+      date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })
+    );
      return date.toLocaleDateString("en-US", {
        month: "short",
        day: "numeric",
@@ -168,7 +176,7 @@ const App = () => {
 
    };
 
-
+  
  const textEditor = (options) => {
    return (
      <Input
@@ -196,8 +204,10 @@ const numberEditor = (day) => {
   // eslint-disable-next-line react/display-name
   return (props) => (
     <InputNumber
+    className="w-1"
       {...props}
       onChange={(e) => {
+        
         const newRows = [...rows];
         newRows[props.rowIndex].hours[day] = e.value || 0;
         newRows[props.rowIndex].total = Object.values(
@@ -218,10 +228,19 @@ const numberEditor = (day) => {
   );
 };
 
-  const addRow = (type) => {
-    console.log("type"+type);
-   setRows([
-     ...rows,
+ const addRow = (type) => {
+   // Find the index of the last row with the same project type
+   let lastIndex;
+   if (type === "Sales Activity") {
+     lastIndex = rows.length;
+   } else {
+     lastIndex = rows.findIndex((row) => row.projectType === "Sales Activity");
+     if (lastIndex === -1) lastIndex = rows.length;
+   }
+
+   // Insert the new row at the calculated index
+   setRows((prevRows) => [
+     ...prevRows.slice(0, lastIndex),
      {
        projectType: type,
        projectName: "",
@@ -230,10 +249,14 @@ const numberEditor = (day) => {
        hours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 },
        total: 0,
      },
+     ...prevRows.slice(lastIndex),
    ]);
-   console.log(rows);
  };
 
+
+
+
+  
  const removeRow = (index) => {
    if (index !== 0) {
      const newRows = rows.filter((row, i) => i !== index);
@@ -243,19 +266,20 @@ const numberEditor = (day) => {
 
  const saveData = () => {
    localStorage.setItem("timesheetData", JSON.stringify(rows));
+  dt.current.exportCSV();
    console.log(JSON.stringify(rows));
  };
 
  const exportCSV = async () => {
    try {
-     console.log(JSON.stringify(rows));
+     console.log(startDate.toISOString());
      const rowsArray = JSON.parse(JSON.stringify(rows));
      rowsArray.push({ "Project Type": "Total Hours", total });
-     rowsArray.push({ "startDate": startDate });
+     rowsArray.push({ startDate: startDate.toISOString() });
 
      const dataToSend = JSON.stringify(rowsArray);
      console.log(dataToSend);
-    const response = await fetch("http://localhost:3000/api/updateData", {
+      const response = await fetch("http://localhost:3000/api/updateData", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -274,12 +298,10 @@ const numberEditor = (day) => {
       const response = await fetch("http://localhost:3000/api/data");
       const jsonData = await response.json();
       console.log(jsonData.slice(0, -2));
-    
- 
       console.log(jsonData[jsonData.length - 1]);
       const filteredRows = jsonData.slice(0, -2);
       setRows(filteredRows);
-      //setStartDate(jsonData[jsonData.length - 1]);
+      const dateFromString = new Date(jsonData[jsonData.length - 1]);
     } catch (error) {
       console.error("Error fetching data:", error);
     }
@@ -287,6 +309,7 @@ const numberEditor = (day) => {
 
   const handleDeleteData = async () => {
     try {
+      console.log(startDate);
       const response = await fetch("http://localhost:3000/api/deleteData", {
         method: "DELETE",
       });
@@ -697,8 +720,8 @@ const numberEditor = (day) => {
                     <Column
                       field="projectType"
                       key="projectType"
-                      editor={(options) => textEditor(options)}
-                      onCellEditComplete={onCellEditComplete}
+                      // editor={(options) => textEditor(options)}
+                      // onCellEditComplete={onCellEditComplete}
                     />
                     <Column
                       field="projectName"
@@ -722,36 +745,127 @@ const numberEditor = (day) => {
                       field="hours.mon"
                       key="hours.mon"
                       editor={numberEditor("mon")}
+                      editorValidator={(rowData) => {
+                        const monHours = rowData.hours.mon;
+                        return monHours <= 8; // Validate if the entered value is less than or equal to 8
+                      }}
+                      body={(rowData, column) => (
+                        <div
+                          style={{
+                            color: rowData.hours.mon > 8 ? "red" : "inherit",
+                          }}
+                        >
+                          {rowData.hours.mon}
+                        </div>
+                      )}
                     />
                     <Column
                       field="hours.tue"
                       key="hours.tue"
                       editor={numberEditor("tue")}
+                      editorValidator={(rowData) => {
+                        const monHours = rowData.hours.tue;
+                        return monHours <= 8; // Validate if the entered value is less than or equal to 8
+                      }}
+                      body={(rowData, column) => (
+                        <div
+                          style={{
+                            color: rowData.hours.tue > 8 ? "red" : "inherit",
+                          }}
+                        >
+                          {rowData.hours.tue}
+                        </div>
+                      )}
                     />
                     <Column
                       field="hours.wed"
                       key="hours.wed"
                       editor={numberEditor("wed")}
+                      editorValidator={(rowData) => {
+                        const monHours = rowData.hours.wed;
+                        return monHours <= 8; // Validate if the entered value is less than or equal to 8
+                      }}
+                      body={(rowData, column) => (
+                        <div
+                          style={{
+                            color: rowData.hours.wed > 8 ? "red" : "inherit",
+                          }}
+                        >
+                          {rowData.hours.wed}
+                        </div>
+                      )}
                     />
                     <Column
                       field="hours.thu"
                       key="hours.thu"
                       editor={numberEditor("thu")}
+                      editorValidator={(rowData) => {
+                        const monHours = rowData.hours.thu;
+                        return monHours <= 8; // Validate if the entered value is less than or equal to 8
+                      }}
+                      body={(rowData, column) => (
+                        <div
+                          style={{
+                            color: rowData.hours.thu > 8 ? "red" : "inherit",
+                          }}
+                        >
+                          {rowData.hours.thu}
+                        </div>
+                      )}
                     />
                     <Column
                       field="hours.fri"
                       key="hours.fri"
                       editor={numberEditor("fri")}
+                      editorValidator={(rowData) => {
+                        const monHours = rowData.hours.fri;
+                        return monHours <= 8; // Validate if the entered value is less than or equal to 8
+                      }}
+                      body={(rowData, column) => (
+                        <div
+                          style={{
+                            color: rowData.hours.fri > 8 ? "red" : "inherit",
+                          }}
+                        >
+                          {rowData.hours.fri}
+                        </div>
+                      )}
                     />
                     <Column
                       field="hours.sat"
                       key="hours.sat"
                       editor={numberEditor("sat")}
+                      editorValidator={(rowData) => {
+                        const monHours = rowData.hours.sat;
+                        return monHours <= 8; // Validate if the entered value is less than or equal to 8
+                      }}
+                      body={(rowData, column) => (
+                        <div
+                          style={{
+                            color: rowData.hours.sat > 8 ? "red" : "inherit",
+                          }}
+                        >
+                          {rowData.hours.sat}
+                        </div>
+                      )}
                     />
                     <Column
                       field="hours.sun"
                       key="hours.sun"
                       editor={numberEditor("sun")}
+                      editorValidator={(rowData) => {
+                        const monHours = rowData.hours.sun;
+                        return monHours <= 8; // Validate if the entered value is less than or equal to 8
+                      }}
+                      body={(rowData, column) => (
+                        <div
+                          style={{
+                            color: rowData.hours.sun > 8 ? "red" : "inherit",
+                          }}
+                        >
+                          {rowData.hours.sun}
+                        </div>
+                      )}
                     />
                     <Column
                       field="total"
@@ -775,19 +889,31 @@ const numberEditor = (day) => {
                     />
                     <Column
                       style={{ border: "0px solid white" }}
-                      body={(rowData, column) =>
-                        rows.indexOf(rowData) !== 0 &&
-                        rows.indexOf(rowData) !== 1 ? (
-                          <IconButton
-                            variant="unstyled"
-                            fontSize="15px"
-                            icon={<MinusIcon color="gray.500 " />}
-                            onClick={() => {
-                              removeRow(rows.indexOf(rowData));
-                            }}
-                          />
-                        ) : null
-                      }
+                      body={(rowData, column) => {
+                        const isFirstSales =
+                          rows.findIndex(
+                            (row) => row.projectType === "Sales Activity"
+                          ) === rows.indexOf(rowData);
+                        const isFirstBAU =
+                          rows.findIndex(
+                            (row) => row.projectType === "BAU Activity"
+                          ) === rows.indexOf(rowData);
+
+                        if (!isFirstSales && !isFirstBAU) {
+                          return (
+                            <IconButton
+                              variant="unstyled"
+                              fontSize="15px"
+                              icon={<MinusIcon color="gray.500 " />}
+                              onClick={() => {
+                                removeRow(rows.indexOf(rowData));
+                              }}
+                            />
+                          );
+                        } else {
+                          return null;
+                        }
+                      }}
                     />
                   </DataTable>
                 </div>
@@ -856,7 +982,7 @@ const numberEditor = (day) => {
                   fontFamily="Arial"
                   borderRadius="4px"
                   fontWeight="light"
-                  rightIcon={<ArrowBackIcon />}
+                  rightIcon={<DeleteIcon />}
                   _hover={{ bgColor: "#ff6196" }}
                   _active={{ bgColor: "#ff6196" }}
                   onClick={handleDeleteData}

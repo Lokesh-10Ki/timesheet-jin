@@ -3,3 +3,6 @@ td,tr{
     border-bottom: 1px solid #dddddd;
 
 }
+red-color .p-inputnumber-input {
+  color: red !important; /* Use '!important' to override any existing styles */
+}
